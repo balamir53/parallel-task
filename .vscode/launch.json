@@ -8,7 +8,7 @@
                 "name": "(gdb) Launch",
                 "type": "cppdbg",
                 "request": "launch",
-                "program": "${workspaceFolder}/sequential/sequential",
+                "program": "${workspaceFolder}/sequential/sequentialNew",
                 "args": [],
                 "stopAtEntry": false,
                 "cwd": "${fileDirname}",

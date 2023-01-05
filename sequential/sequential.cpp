@@ -23,7 +23,7 @@ float Rad2Deg(float radians);
 //void freeMemory(int* array, int size);
 
 // CONSTANTS //////////////////////////////////////////////////////////////////
-const char *FILE_NAME = "/home/yzt/project-oguz/lena16bit.raw";
+const char *FILE_NAME = "/home/ziya/parallel-task/lena16bit.raw";
 const int MAX_NAME = 512;               // max length of string
 const int IMAGE_X = 256;                // image width
 const int IMAGE_Y = 256;                // image height

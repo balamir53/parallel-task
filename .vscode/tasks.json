@@ -11,20 +11,18 @@
             "group": "build"
         },
         {
-            "type": "cppbuild",
-            "label": "C/C++: g++ build active file",
+            "label": "myC/C++: g++ build active file",
             "command": "/usr/bin/g++",
             "args": [
                 "-fdiagnostics-color=always",
-                "-I/home/yzt/project-oguz/sequential",
+                "-I/home/yzt/parallel-task/sequential",
                 "-g",
                 "${file}",
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}",
                 "${fileDirname}/Vector2d.cpp",
                 "-std=c++11",
-                "-lm",
-                
+                "-lm"
             ],
             "options": {
                 "cwd": "${fileDirname}"
