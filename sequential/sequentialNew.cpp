@@ -190,8 +190,11 @@ int* checkNeighbour(int* matrix, int* vectorV, int x, int y) {
 	int row, column;
 
 	int matrixA [5][5];
+	int matrixB [5][5];
+	int product [5][5];
+	int i,j,k,l;
 
-	for (int i = 0; i <x*y; i++) {
+	for (i = 0; i <x*y; i++) {
 
 		row = i / x;
 		column = i % x;
@@ -201,9 +204,28 @@ int* checkNeighbour(int* matrix, int* vectorV, int x, int y) {
 			vectorV[i] = -1;
 			continue;
 		}
-		else {
-			vectorV[i] = findMaxNeigbour(matrix, i,y);
+
+		//check if it is in the lower triangle
+		if(column < row){
+			// get matrixA
+
+			//get matrix B
+
+			//multiply them
+			for(l=0; l<5; ++l)
+			for(j=0; j<5; ++j) {
+				product[l][j] = 0;
+			}
+			for(l=0; l<5; ++l)
+			for(j=0; j<5; ++j)
+			for(k=0; k<5; ++k) {
+				product[l][j]+=matrixA[l][k]*matrixB[k][j];
+			}
+
+			// insert product into matrixA position
 		}
+		vectorV[i] = findMaxNeigbour(matrix, i,y);
+	
 
 	}
 
@@ -220,6 +242,7 @@ int* checkNeighbour(int* matrix, int* vectorV, int x, int y) {
 //}
 
 int findMaxNeigbour(int* matrix, int index,int width) {
+	// get matrix a and b
 	int max = matrix[index];
 	int tag = 0;
 
