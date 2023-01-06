@@ -8,7 +8,10 @@
             "problemMatcher": [
                 "$nvcc"
             ],
-            "group": "build"
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
         },
         {
             "label": "myC/C++: g++ build active file",
@@ -30,10 +33,7 @@
             "problemMatcher": [
                 "$gcc"
             ],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
+            "group": "build",
             "detail": "compiler: /usr/bin/g++"
         }
     ]

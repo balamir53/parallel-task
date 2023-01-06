@@ -7,3 +7,6 @@ LFLAGS = -L$(CUDAPATH)/lib64 -lcuda -lcudart -lm
 
 VectorAdd:
 	$(NVCC) $(NVCCFLAGS) $(LFLAGS) -o parallelMet1 parallelMet1.cu
+
+VectorAdd2:
+	$(NVCC) $(NVCCFLAGS) $(LFLAGS) -o parallelMet1old parallelMet1old.cu

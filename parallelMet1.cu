@@ -23,10 +23,6 @@
 bool loadRawImage16(const char *, int, int, unsigned short *, int*);
 cudaError_t allocateMemoryOnDevice(int *, int *);
 __global__ void checkNeigbours(int*, int*, int, int);
-__device__ int findMaxNeighbour(int*, int, int);
-__device__ int findVectorSum(int*, int, int);
-__device__ float* vectorDir(int, float [2]);
-__device__ int closestDir(float*);
 
 
 //Constants
@@ -34,7 +30,7 @@ const char *FILE_NAME = "/home/ziya/parallel-task/lena16bit.raw";
 const int MAX_NAME = 512;               // max length of string
 const int IMAGE_X = 256;                // image width
 const int IMAGE_Y = 256;                // image height
-const int APRON = 3;
+const int APRON = 2;
 const int WIDTH = (IMAGE_X + APRON * 2);
 const int SIZEOFVECTORARRAY = (IMAGE_X + APRON * 2) * (IMAGE_X + APRON * 2);
 //const float THRESHHOLD = 3;
@@ -45,139 +41,75 @@ __global__ void checkNeigbours(int* dataMatrix, int* vectorMatrix, int X, int Y)
 	int i = (blockIdx.x * blockDim.x) + threadIdx.x;
 	int j = (blockIdx.y * blockDim.y) + threadIdx.y;
 	int index = j * X + i;
+
+	int row, column;
+
+	int matrixA [5][5];
+	int matrixB [5][5];
+	int product [5][5];
+	int k,l,h;
+
 	if ((i < X) && (j < Y)) {
-		vectorMatrix[index] = findMaxNeighbour(dataMatrix, index, X);
+
+		row = index / X;
+		column = index % X;
+
+		if (dataMatrix[index] == 0) {
+			vectorMatrix[index] = -1;
+		}
+		else {
+			vectorMatrix[index] = dataMatrix[index];
+		}
+
+		//check if it is in the lower triangle
+		if(column < row){
+			//initialize them
+			for(l=0; l<5; ++l)
+			for(h=0; h<5; ++h) {
+				product[l][h] = 0;
+				matrixA[l][h] = 0;
+				matrixB[l][h] = 0;
+			}
+			// get matrixA
+			// getFivetoFiveMatrix(vectorV, matrixA,row,column,x);
+			for(l=0;l<5;l++){
+				for (h=0;h<5;h++){
+					matrixA[l][h]=dataMatrix[(row-2+l)*X+(column-2+h)];
+				}	
+			}
+			//get matrix B
+			// getFivetoFiveMatrix(vectorV, matrixB,column,row,x);
+			for(l=0;l<5;l++){
+				for (h=0;h<5;h++){
+					matrixB[l][h]=dataMatrix[(row-2+l)*X+(column-2+h)];
+				}	
+			}
+			
+			for(l=0; l<5; ++l)
+			for(h=0; h<5; ++h)
+			for(k=0; k<5; ++k) {
+				product[l][h]+=matrixA[l][k]*matrixB[k][h];
+
+			}
+			// add product into matrixA position of vectorV
+			// addMatrix(vectorV, product,row,column,x);
+			for(l=0;l<5;l++){
+				for (h=0;h<5;h++){
+					vectorMatrix[(row-2+l)*X+(column-2+h)]+=product[l][h];
+				}
+	
+			}
+			
+		}
+
 	}
 	//__syncthreads();
 	if (i<2 * APRON || i>X - 2 * APRON) return;
 	if (j<2 * APRON || j>Y - 2 * APRON) return;
-
-	vectorMatrix[index] = findVectorSum(vectorMatrix, index, X);
-
-
-}
-
-__device__ int findVectorSum(int* matrix, int index, int X) {
-	float sum[2] = { 0 };
-	float vec[2];
-	for (int i = 1; i < 4; i++) {
-		float * vec1 = vectorDir(matrix[index - (X*i)], vec);
-		float * vec2 = vectorDir(matrix[index + (X*i)], vec);
-		sum[0] = sum[0] + vec1[0] + vec2[0];
-		sum[1] = sum[1] + vec1[1] + vec2[1];
-		vec1 = vectorDir(matrix[index - i], vec);
-		vec2 = vectorDir(matrix[index + i], vec);
-		sum[0] = sum[0] + vec1[0] + vec2[0];
-		sum[1] = sum[1] + vec1[1] + vec2[1];
-		for (int j = 1; j < 5 - i; j++) {
-			vec1 = vectorDir(matrix[index - X * i + j], vec);
-			vec2 = vectorDir(matrix[index - X * i - j], vec);
-			sum[0] = sum[0] + vec1[0] + vec2[0];
-			sum[1] = sum[1] + vec1[1] + vec2[1];
-		}
-	}
-	float length = sqrtf((sum[0] * sum[0]) + (sum[1] * sum[1]));
-	if (length < THRESHOLD)
-		return 0;
-	return closestDir(sum);
-}
-
-__device__ int closestDir(float* vec) {
-	float angle = atan2(vec[0], vec[1]);
-	angle = angle * (180 / 3.141592653589793238);
-	if (angle < 0) angle = 360 + angle;
-	angle = angle + 45;
-	int dir = angle / 45;
-	if ((int)angle % 45 > 22.5) dir = dir + 1;
-	if (dir == 9) return 0;
-	else return dir;
+	return;
 }
 
 
-__device__ float* vectorDir(int X,float vec[]) {
-	vec[0] = 0;
-	vec[1] = 1;
-	if (X == 0) {
-		return vec;
-		// return {0,0}
-	}else if (X == 1){
-		vec[0] = 0; vec[1] = 1;
-		return vec;}
-		else if (X == 2){
-		vec[0] = 0.707; vec[1] = 0.707;
-		return vec;}
-		else if (X == 3){
-		vec[0] = 1; vec[1] = 0;
-		return vec;}
-		else if (X == 4){
-		vec[0] = 0.707; vec[1] = -0.707;
-		return vec;}
-		else if (X == 5){
-		vec[0] = 0; vec[1] = -1;
-		return vec;}
-		else if (X == 6){
-		vec[0] = -0.707; vec[1] = -0.707;
-		return vec;}
-		else if (X == 7){
-		vec[0] = -1; vec[1] = 0;
-		return vec;}
-		else if (X == 8){
-		vec[0] = -0.707; vec[1] = 0.707;
-		return vec;
-		}
-		else if (X == 1){
-		vec[0] = 0; vec[1] = 0;
-		return vec;}
-	else {return vec;}
-}
-__device__ int findMaxNeighbour(int* matrix, int index, int X) {
-	int max = matrix[index];
-	if (max == 0) return -1;
-	int tag = 0;
-
-	int n = matrix[index - X];
-	int ne = matrix[index - X + 1];
-	int e = matrix[index + 1];
-	int se = matrix[index + X + 1];
-	int s = matrix[index + X];
-	int sw = matrix[index + X - 1];
-	int w = matrix[index - 1];
-	int nw = matrix[index - X - 1];
-
-	if (n > max) {
-		max = n;
-		tag = 1;
-	}
-	if (ne > max) {
-		max = ne;
-		tag = 2;
-	}
-	if (e > max) {
-		max = e;
-		tag = 3;
-	}
-	if (se > max) {
-		max = se;
-		tag = 4;
-	}
-	if (s > max) {
-		max = s;
-		tag = 5;
-	}
-	if (sw > max) {
-		max = n;
-		tag = 6;
-	}
-	if (w > max) {
-		max = n;
-		tag = 7;
-	}
-	if (nw > max) {
-		max = n;
-		tag = 8;
-	}
-	return tag;
-}
 int main()
 {
 	cudaError_t cudaStatus;
@@ -241,7 +173,8 @@ int main()
 	}
 	for (int i = 0; i < SIZEOFVECTORARRAY; i++) {
 		//std::cout << (filterV[i]);
-		fwrite(&(imageV[i]), sizeof(int), 1, outfile);
+		// fwrite(&(imageV[i]), sizeof(int), 1, outfile);
+		fwrite(&(imageV[i]), 2, 1, outfile);
 
 	}
 

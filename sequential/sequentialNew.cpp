@@ -14,12 +14,8 @@ using namespace std::chrono;
 // function declarations //////////////////////////////////////////////////////
 bool loadRawImage16(const char *fileName, int x, int y, unsigned short *data);
 int* checkNeighbour(int* matrix, int* vectorV, int x, int y);
-int findMaxNeigbour(int* matrix, int index, int width);
-int* filterStar(int* matrix, int* output, int x, int y);
-int calculateVectorSum(int* input, int width, int index);
-Vector2d vectorDir(int x);
-int closestDir(Vector2d vec);
-float Rad2Deg(float radians);
+int (*(getFivetoFiveMatrix)(int* vector, int matrix[][5], int row, int column, int rowLength))[5];
+int (*(addMatrix)(int* vector, int matrix[][5], int row, int column, int rowLength))[5];
 //void freeMemory(int* array, int size);
 
 // CONSTANTS //////////////////////////////////////////////////////////////////
@@ -81,7 +77,7 @@ int main(int argc, char **argv)
 
 	vectorVM = checkNeighbour(imageM,vectorVM, imageX + 2 * apron, imageY + 2 * apron);
 
-	filterV = filterStar(vectorVM, filterV, imageX + 2 * apron, imageY + 2 * apron);
+	// filterV = filterStar(vectorVM, filterV, imageX + 2 * apron, imageY + 2 * apron);
 
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<milliseconds>(t2 - t1).count();
@@ -90,7 +86,7 @@ int main(int argc, char **argv)
 	FILE *outfile;
 
 	// open file for writing
-	outfile = fopen("ducks.bin", "w");
+	outfile = fopen("lena16bit.bin", "w");
 	if (outfile == NULL)
 	{
 		fprintf(stderr, "\nError opend file\n");
@@ -98,7 +94,9 @@ int main(int argc, char **argv)
 	}
 	for (int i = 0; i < sizeOfVectorArray; i++) {
 		//std::cout << (filterV[i]);
-		fwrite(&(filterV[i]), sizeof(int), 1, outfile);
+		// fwrite(&(imageM[i]), sizeof(int), 1, outfile);
+		fwrite(&(vectorVM[i]), 2, 1, outfile);
+
 
 	}
 
@@ -131,17 +129,17 @@ bool loadRawImage16(const char *fileName, int x, int y, unsigned short *data)
 	}
 
 	// read pixel data
-	fread(data, 1, x*y * 2, fp);
+	fread(data, 2, x*y * 2, fp);
 	fclose(fp);
 
 	//// swap byte order
-	//unsigned char byte;
-	//for (int i = 0; i < x*y * 2; i += 2)
-	//{
-	//	byte = data[i];
-	//	data[i] = data[i + 1];
-	//	data[i + 1] = byte;
-	//}
+	// unsigned char byte;
+	// for (int i = 0; i < x*y * 2; i += 2)
+	// {
+	// 	byte = data[i];
+	// 	data[i] = data[i + 1];
+	// 	data[i + 1] = byte;
+	// }
 	//change endian order from litte to big
 	int rowN = -1;
 	int rowNN = 0;
@@ -165,6 +163,7 @@ bool loadRawImage16(const char *fileName, int x, int y, unsigned short *data)
 		//unsigned short temp = _byteswap_ushort(data[i]);
 		unsigned short temp = data[i];
 		//assume that only apron pixels are zero
+		//divide it by 100 for better visualization
 		imageM[(rowNN+apron)*width+apron+iN] = temp+1; //extend the data to integer type
 	}
 
@@ -198,39 +197,71 @@ int* checkNeighbour(int* matrix, int* vectorV, int x, int y) {
 
 		row = i / x;
 		column = i % x;
-		
-		//only apron values are zero, already have added to every 16 bit value "one"
+
 		if (matrix[i] == 0) {
 			vectorV[i] = -1;
 			continue;
 		}
-
+		else {
+			vectorV[i] = matrix[i];
+		}
+		
 		//check if it is in the lower triangle
 		if(column < row){
-			// get matrixA
-
-			//get matrix B
-
-			//multiply them
+			//initialize them
 			for(l=0; l<5; ++l)
 			for(j=0; j<5; ++j) {
 				product[l][j] = 0;
+				matrixA[l][j] = 0;
+				matrixB[l][j] = 0;
 			}
+			// get matrixA
+			getFivetoFiveMatrix(vectorV, matrixA,row,column,x);
+			//get matrix B
+			getFivetoFiveMatrix(vectorV, matrixB,column,row,x);
+
+			
 			for(l=0; l<5; ++l)
 			for(j=0; j<5; ++j)
 			for(k=0; k<5; ++k) {
 				product[l][j]+=matrixA[l][k]*matrixB[k][j];
-			}
 
-			// insert product into matrixA position
+			}
+			// add product into matrixA position of vectorV
+			addMatrix(vectorV, product,row,column,x);
+			
 		}
-		vectorV[i] = findMaxNeigbour(matrix, i,y);
+		// vectorV[i] = findMaxNeigbour(matrix, i,y);
 	
 
 	}
 
 	return vectorV;
 }
+// considering that the matrices are quadratic
+int (*(getFivetoFiveMatrix)(int* vector, int matrix[][5], int row, int column, int rowLength))[5]
+{
+	int i,j;
+	for(i=0;i<5;i++){
+		for (j=0;j<5;j++){
+			matrix[i][j]=vector[(row-2+i)*rowLength+(column-2+j)];
+		}	
+	}
+	return matrix;
+}
+
+int (*(addMatrix)(int* vector, int matrix[][5], int row, int column, int rowLength))[5]
+{
+	int i,j;
+	for(i=0;i<5;i++){
+		for (j=0;j<5;j++){
+			vector[(row-2+i)*rowLength+(column-2+j)]+=matrix[i][j];
+		}
+	
+	}
+	return matrix;
+}
+
 //
 //void freeMemory(int* array, int size) {
 //	if (array) {
@@ -241,136 +272,7 @@ int* checkNeighbour(int* matrix, int* vectorV, int x, int y) {
 //	}
 //}
 
-int findMaxNeigbour(int* matrix, int index,int width) {
-	// get matrix a and b
-	int max = matrix[index];
-	int tag = 0;
 
-	int n = matrix[index - width];
-	int ne = matrix[index - width + 1];
-	int e = matrix[index + 1];
-	int se = matrix[index + width + 1];
-	int s = matrix[index + width];
-	int sw = matrix[index + width - 1];
-	int w = matrix[index - 1];
-	int nw = matrix[index - width - 1];
-
-	if (n > max) {
-		max = n;
-		tag=1;
-	}
-	if (ne > max) {
-		max = ne;
-		tag=2;
-	}
-	if (e > max) {
-		max = e;
-		tag=3;
-	}
-	if (se > max) {
-		max = se;
-		tag=4;
-	}
-	if (s > max) {
-		max = s;
-		tag=5;
-	}
-	if (sw > max) {
-		max = n;
-		tag=6;
-	}
-	if (w > max) {
-		max = n;
-		tag=7;
-	}
-	if (nw > max) {
-		max = n;
-		tag=8;
-	}
-	return tag;
-}
-
-int* filterStar(int* matrix,int* output,int x,int y) {
-
-	for (int i = 0; i <x*y; i++) {
-
-		//only apron values are zero, already have added to every 16 bit value "one"
-		if (matrix[i] == -1) {
-			output[i] = -1;
-			continue;
-		}
-		else {
-			output[i] = calculateVectorSum(matrix, y, i);
-		}
-
-	}
-
-	return output;
-}
-
-int calculateVectorSum(int* input, int width, int index) {
-	int dir = 0;
-	Vector2d sum = Vector2d(0, 0);
-	sum = sum + Vector2d(1, 1);
-	for (int i = 1; i < 4; i++) {
-		sum = sum + vectorDir(input[index - (width*i)] ) + vectorDir(input[index + (width*i)] );
-		sum = sum + vectorDir(input[index-i]) + vectorDir(input[index+i]);
-		for (int j = 1; j < 5-i; j++) {
-			sum = sum + vectorDir(input[index - width*i + j]) + vectorDir(input[index - width*i - j]);
-		}
-	}
-	
-	float length = Vector2d::Magnitude(sum);	
-	if (length < THRESHHOLD)
-		return 0;	
-	sum = Vector2d::Normal(sum);
-	return closestDir(sum);
-}
-
-int closestDir(Vector2d vec) {
-	float angle = atan2(vec.x, vec.y);
-	angle = Rad2Deg(angle);
-	if (angle < 0) angle = 360 + angle;
-	if (angle < 22.5 || angle >337.5) return 1;
-	else if (angle < 67.5) return 2;
-	else if (angle < 112.5) return 3;
-	else if (angle < 157.5) return 4;
-	else if (angle < 202.5) return 5;
-	else if (angle < 247.5) return 6;
-	else if (angle < 292.5) return 7;
-	else return 8;
-}
-
-float Rad2Deg(float radians) {
-	return radians * (180 / 3.141592653589793238);
-}
-
-Vector2d vectorDir(int x) {
-	switch (x) {
-	case 0:
-		return Vector2d(0, 0);
-	case 1:
-		return Vector2d(0, 1);
-	case 2:
-		return Vector2d(0.707, 0.707);
-	case 3:
-		return Vector2d(1, 0);
-	case 4:
-		return Vector2d(0.707,-0.707);
-	case 5:
-		return Vector2d(0,-1);
-	case 6:
-		return Vector2d(-0.707,-0.707);
-	case 7:
-		return Vector2d(-1,0);
-	case 8:
-		return Vector2d(-0.707, 0.707);
-	case -1:
-		return Vector2d(0, 0);
-	//default:
-	//	return Vector2d(0, 0);
-	}
-}
 
 
 
